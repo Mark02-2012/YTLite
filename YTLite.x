@@ -1,10 +1,3 @@
-@interface YTActivePlaybackRateModel : NSObject
-@property (nonatomic, assign, readonly) float activeRate;
-@end
-
-// add to YTSingleVideoController:
-@property (nonatomic, assign, readonly) YTActivePlaybackRateModel *activePlaybackRateModel;
-
 #import "YTLite.h"
 
 static UIImage *YTImageNamed(NSString *imageName) {
@@ -394,13 +387,8 @@ static UIImage *YTImageNamed(NSString *imageName) {
 void addEndTime(YTPlayerViewController *self, YTSingleVideoController *video, YTSingleVideoTime *time) {
     if (!ytlBool(@"videoEndTime")) return;
 
-   // getter — use new API as fallback
-CGFloat rate = 1.0;
-if ([video respondsToSelector:@selector(playbackRate)]) {
-    rate = video.playbackRate ?: 1.0;
-} else if ([video respondsToSelector:@selector(activePlaybackRateModel)]) {
-    rate = video.activePlaybackRateModel.activeRate ?: 1.0;
-}
+    CGFloat rate = video.playbackRate != 0 ? video.playbackRate : 1.0;
+    NSTimeInterval remainingTime = (lround(video.totalMediaTime) - lround(time.time)) / rate;
 
     NSDate *estimatedEndTime = [NSDate dateWithTimeIntervalSinceNow:remainingTime];
 
@@ -476,12 +464,9 @@ void autoSkipShorts(YTPlayerViewController *self, YTSingleVideoController *video
     if ([self.activeVideoPlayerOverlay isKindOfClass:NSClassFromString(@"YTMainAppVideoPlayerOverlayViewController")]
         && [self.view.superview isKindOfClass:NSClassFromString(@"YTWatchView")]) {
         YTMainAppVideoPlayerOverlayViewController *overlayVC = (YTMainAppVideoPlayerOverlayViewController *)self.activeVideoPlayerOverlay;
-// setter — fall back to YTPlayerViewController
-if ([video respondsToSelector:@selector(setPlaybackRate:)]) {
-    [video setPlaybackRate:newRate];
-} else {
-    // route through YTPlayerViewController which still has this method
-}
+
+        NSArray *speedLabels = @[@0.25, @0.5, @0.75, @1.0, @1.25, @1.5, @1.75, @2.0, @3.0, @4.0, @5.0];
+        [overlayVC setPlaybackRate:[speedLabels[ytlInt(@"autoSpeedIndex")] floatValue]];
     }
 }
 
